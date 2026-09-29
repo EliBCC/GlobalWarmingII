@@ -1,0 +1,2 @@
+# Global Warming II: Create Your Own Models in Python
+This repo contains submissions for the course "[Global Warming II: Create Your Own Models in Python](https://www.coursera.org/learn/global-warming-model)" found on Coursera. The course is offered by David Archer at the University of Chicago
