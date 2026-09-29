@@ -95,4 +95,5 @@ def main():
     print("Plot successfully saved!")
 
 if __name__ == "__main__":
+    steps = int(input(""))
     main()
