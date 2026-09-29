@@ -35,8 +35,8 @@ sigma = 5.67E-8          # W/m2 K4
 import numpy as np
 import matplotlib.pyplot as plt
 
-steps = 50
-timeStep = 100           # years
+steps = 500
+timeStep = 10           # years
 waterDepth = 4000        # meters
 L = 1350                 # Watts/m2
 albedo = 0.3
@@ -47,7 +47,7 @@ initialTemp = 0          # K
 heatCapacityCubicMWater = 4184000   # J/m^3
 heatCapacityEarth = waterDepth * heatCapacityCubicMWater  # J/m^2
 
-wattsToJoulesPerYear = 60 * 60 * 24 * 365
+secondsPerYear = 60 * 60 * 24 * 365 # s/year
 
 def temperature(heat_content):
     return heat_content / heatCapacityEarth
@@ -62,36 +62,28 @@ def totalHeatFluxWatts(temp):
     return incomingSolar() - outgoingIR(temp)
 
 def totalHeatFluxJoules(temp):
-    return totalHeatFluxWatts(temp) * wattsToJoulesPerYear * timeStep
-
-def heatContent(prev_heat_content, prev_total_heat_flux):
-    return prev_heat_content + prev_total_heat_flux
+    return totalHeatFluxWatts(temp) * secondsPerYear * timeStep
 
 def main():
     # Initialize array
     # 0: time (years)   1: temperature (K)  2: heat content (J/m^2) 3: total heat flux (J/m^2)
-    temperature_arr = np.empty((steps, 4))
-    times = np.arange(0, (steps * timeStep), timeStep)
+    times = np.arange(steps) * timeStep
+    temps = np.empty(steps)
+    heat_content = 0
+
 
     # Set first row (calculate initial heat content from initial temp)
-    temperature_arr[:, 0] = times
-    temperature_arr[0, 1] = initialTemp
-    temperature_arr[0, 2] = initialTemp * heatCapacityEarth 
-    temperature_arr[0, 3] = totalHeatFluxJoules(initialTemp)
+    temps[0] = initialTemp
+    heat_content = temps[0] * heatCapacityEarth
 
-    # Calculate rows
+    # Simulate
     for s in range(1, steps):
-        heat_content = heatContent(temperature_arr[s - 1, 2], temperature_arr[s - 1, 3])
-        temp = temperature(heat_content)
-        total_heat_flux = totalHeatFluxJoules(temp)
-        
-        temperature_arr[s, 1] = temp
-        temperature_arr[s, 2] = heat_content
-        temperature_arr[s, 3] = total_heat_flux
+        heat_content += totalHeatFluxJoules(temps[s - 1])
+        temps[s] = temperature(heat_content)
 
     # Plot table
     plt.figure(figsize=(8,5))
-    plt.plot(temperature_arr[:, 0], temperature_arr[:, 1], marker='o', linestyle='-', color='b', label='Temperature vs Time')
+    plt.plot(times, temps, marker='o', linestyle='-', color='b', label='Temperature vs Time')
 
     plt.title('Naked Planet Model')
     plt.xlabel('Time (years)')
