@@ -65,8 +65,7 @@ def totalHeatFluxJoules(temp):
     return totalHeatFluxWatts(temp) * secondsPerYear * timeStep
 
 def main():
-    # Initialize array
-    # 0: time (years)   1: temperature (K)  2: heat content (J/m^2) 3: total heat flux (J/m^2)
+    # Initialize arrays
     times = np.arange(steps) * timeStep
     temps = np.empty(steps)
     heat_content = 0
