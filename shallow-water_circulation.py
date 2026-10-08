@@ -17,7 +17,7 @@ plotOutput = False
 
 dT = 600    # seconds
 G = 9.8e-4  # artificially low to allow a long time step
-rotationScheme = ""
+rotationScheme = "PlusMinus"
 
 # Note: the rotation rate gradient is more intense than the real world, so that
 # the model can equilibrate quickly.
