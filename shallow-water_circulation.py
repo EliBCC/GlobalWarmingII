@@ -11,7 +11,7 @@ nSlices, iRowOut, iColOut = input("").split()
 nSlices, iRowOut, iColOut = [ int(nSlices), int(iRowOut), int(iColOut) ]         
 ntAnim = 1          
 horizontalWrap = True 
-interpolateRotation = False  # or True, either works
+interpolateRotation = True  # or True, either works
 textOutput = False
 plotOutput = False
 
@@ -103,15 +103,36 @@ elif initialPerturbation == "EWGradient":
     H[:,0:midCell] = 0.1
 
 
-def longitudinalTimeDerivative(C_rotation, V_cell, C_flow, dHdX_cell, C_drag, U_cell, C_wind):
-    return C_rotation * V_cell - C_flow * dHdX_cell - C_drag * U_cell + C_wind  
+def longitudinalTimeDerivative(rotation, C_flow, dHdX_cell, C_drag, U_cell, C_wind):
+    return rotation - C_flow * dHdX_cell - C_drag * U_cell + C_wind  
 
-def latitudinalTimeDerivative(C_rotation, U_cell, C_flow, dHdY_cell, C_drag, V_cell):
-    return -C_rotation * U_cell - C_flow * dHdY_cell - C_drag * V_cell
+def latitudinalTimeDerivative(rotation, C_flow, dHdY_cell, C_drag, V_cell):
+    return -rotation - C_flow * dHdY_cell - C_drag * V_cell
 
 def verticalTimeDerivative(dUdX_cell, dVdY_cell, H_const, dX_const):
     return -(dUdX_cell + dVdY_cell) * H_const / dX_const
 
+def rotationInterpolation(U, V, rotU, rotV, rotConst):
+    U_interpolated = (U[:,1:] + U[:,:-1]) / 2
+    V_interpolated = (V[1:,:] + V[:-1,:]) / 2
+
+    rotU_interpolated = numpy.array([rotConst]).T * U_interpolated
+    rotV_interpolated = numpy.array([rotConst]).T * V_interpolated
+
+    if horizontalWrap:
+        rotV_interpolated = numpy.hstack((rotV_interpolated[:, -1:], rotV_interpolated))
+    else:
+        rotV_interpolated = numpy.hstack((numpy.zeros((rotV_interpolated.shape[0], 1)), rotV_interpolated))
+
+    rotU_interpolated = numpy.vstack((numpy.zeros((1,rotU_interpolated.shape[1])), rotU_interpolated))
+
+    rotU[:,:] = (rotU_interpolated[1:,:] + rotU_interpolated[:-1,:]) / 2
+    rotV[:,:] = (rotV_interpolated[:,1:] + rotV_interpolated[:,:-1]) / 2
+
+"""
+This is the work-horse subroutine.  It steps forward in time, taking ntAnim steps of
+duration dT.  
+"""
 
 """
 This is the work-horse subroutine.  It steps forward in time, taking ntAnim steps of
@@ -150,19 +171,23 @@ def animStep():
                    dVdY[i, j] = (V[i+1, j] - V[i, j]) / dY
         
         # Calculate the Rotational Terms Here
-        for i in range(len(rotU)):
-            for j in range(len(rotU[0])):
-                rotU[i, j] = rotConst[i] * U[i, j]
-                rotV[i, j] = rotConst[i] * V[i, j]
+        
+        if interpolateRotation:
+             rotationInterpolation(U, V, rotU, rotV, rotConst)
+        else:
+          for i in range(len(rotU)):
+               for j in range(len(rotU[0])):
+                    rotU[i, j] = rotConst[i] * U[i, j]
+                    rotV[i, j] = rotConst[i] * V[i, j]
 
         # Assemble the Time Derivatives Here
         for i in range(len(dUdT)):
                for j in range(len(dUdT[0])):
-                    dUdT[i,j] = longitudinalTimeDerivative(rotConst[i], V[i, j], flowConst, dHdX[i, j], dragConst, U[i, j], windU[i])
+                    dUdT[i,j] = longitudinalTimeDerivative(rotV[i,j], flowConst, dHdX[i, j], dragConst, U[i, j], windU[i])
         
         for i in range(len(dVdT)):
             for j in range(len(dVdT[0])):
-                dVdT[i,j] = latitudinalTimeDerivative(rotConst[i], U[i, j], flowConst, dHdY[i, j], dragConst, V[i, j])
+                    dVdT[i,j] = latitudinalTimeDerivative(rotU[i,j], flowConst, dHdY[i, j], dragConst, V[i, j])
 
         for i in range(len(dHdT)):
              for j in range(len(dHdT[0])):
